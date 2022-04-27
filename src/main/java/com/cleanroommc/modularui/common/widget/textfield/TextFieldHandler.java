@@ -234,7 +234,7 @@ public class TextFieldHandler {
         StringBuilder builder = new StringBuilder();
         builder.append(this.text.get(min.y).substring(min.x)).append('\n');
         if (max.y > min.y + 2) {
-            for (int i = min.y + 1; i < max.y - 1; i++) {
+            for (int i = min.y + 1; i < max.y; i++) {
                 builder.append(this.text.get(i)).append('\n');
             }
         }
@@ -289,7 +289,7 @@ public class TextFieldHandler {
                 setCursor(cursor.y + 1, text.get(text.size() - 1).length());
             }
             if (text.size() > 2) {
-                this.text.addAll(cursor.y + 1, this.text.subList(1, text.size() - 1));
+                this.text.addAll(cursor.y, text.subList(1, text.size() - 1));
                 setCursor(cursor.y + text.size() - 1, text.get(text.size() - 1).length());
             }
         }

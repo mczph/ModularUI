@@ -23,9 +23,9 @@ public class CTTextEditorHandler extends TextFieldHandler {
             setCursor(cursor.y + 1, 0);
             return;
         }
-        this.text.set(cursor.y, line.substring(0, cursor.x));
+        this.text.set(cursor.y, cursor.x > line.length() ? line : line.substring(0, cursor.x));
         int indent = getIndent(line);
-        if (cursor.x < line.length() && line.charAt(cursor.x - 1) == '{' && line.charAt(cursor.x) == '}') {
+        if (cursor.x < line.length() && cursor.x > 0 && line.charAt(cursor.x - 1) == '{' && line.charAt(cursor.x) == '}') {
             this.text.add(cursor.y + 1, createIndent(indent + 4));
             this.text.add(cursor.y + 2, createIndent(indent) + line.substring(cursor.x));
             setCursor(cursor.y + 1, indent + 4);

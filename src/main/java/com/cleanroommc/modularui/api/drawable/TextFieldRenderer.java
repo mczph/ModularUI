@@ -109,7 +109,7 @@ public class TextFieldRenderer extends TextRenderer {
         if (measuredLines.isEmpty()) {
             return new Point2D.Float(getStartX(0), getStartY(1));
         }
-        Pair<String, Float> line = measuredLines.get(cursorPos.y);
+        Pair<String, Float> line = measuredLines.get(Math.min(measuredLines.size() - 1, cursorPos.y));
         String sub = line.getKey().substring(0, Math.min(line.getKey().length(), cursorPos.x));
         return new Point2D.Float(getStartX(line.getRight()) + FR.getStringWidth(sub) * scale, getStartY(measuredLines.size()) + cursorPos.y * getFontHeight());
     }
