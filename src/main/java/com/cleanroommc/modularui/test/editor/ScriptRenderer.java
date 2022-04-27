@@ -9,6 +9,8 @@ import java.util.List;
 
 public class ScriptRenderer extends TextFieldRenderer {
 
+    public static final int SPACE_WIDTH = 4;
+
     public ScriptRenderer(TextFieldHandler handler) {
         super(handler);
     }
@@ -32,19 +34,25 @@ public class ScriptRenderer extends TextFieldRenderer {
     }
 
     protected void drawScriptLines(List<Pair<Document.Line, Float>> measuredLines) {
+        int currentColor = this.color;
         float maxW = 0;
         float y0 = getStartY(measuredLines.size());
         for (Pair<Document.Line, Float> measuredLine : measuredLines) {
             float x0 = getStartX(measuredLine.getRight());
             for (Document.Token token : measuredLine.getKey().tokens) {
+                if (token.type == Document.Type.SPACE) {
+                    x0 += token.text.length() * SPACE_WIDTH * scale;
+                    continue;
+                }
                 color = ScriptStyle.ONE_UI.getColor(token.type);
-                x0 += draw(token.text, x0, y0);
+                x0 += draw(token.text, x0, y0) - x0;
             }
             maxW = Math.max(x0, maxW);
             y0 += FR.FONT_HEIGHT * scale;
         }
         this.lastWidth = maxWidth > 0 ? Math.min(maxW, maxWidth) : maxW;
         this.lastHeight = measuredLines.size() * FR.FONT_HEIGHT * scale;
+        this.color = currentColor;
     }
 
     @Override

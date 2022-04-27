@@ -19,16 +19,16 @@ public class TextFieldHandler {
 
     private static final Joiner JOINER = Joiner.on('\n');
 
-    private final List<String> text = new ArrayList<>();
-    private final Point cursor = new Point(), cursorEnd = new Point();
-    private TextFieldRenderer renderer;
+    protected final List<String> text = new ArrayList<>();
+    protected final Point cursor = new Point(), cursorEnd = new Point();
+    protected TextFieldRenderer renderer;
     @Nullable
-    private ScrollBar scrollBar;
-    private boolean mainCursorStart = true;
-    private int maxLines = 1;
+    protected ScrollBar scrollBar;
+    protected boolean mainCursorStart = true;
+    protected int maxLines = 1;
     @Nullable
-    private Pattern pattern;
-    private int maxCharacters = -1;
+    protected Pattern pattern;
+    protected int maxCharacters = -1;
 
     public void setPattern(@Nullable Pattern pattern) {
         this.pattern = pattern;
@@ -218,7 +218,10 @@ public class TextFieldHandler {
         return this.text;
     }
 
-    public void onChanged() {
+    protected void onChanged() {
+    }
+
+    protected void onCharInserted(char c) {
     }
 
     public String getSelectedText() {
@@ -229,10 +232,10 @@ public class TextFieldHandler {
             return this.text.get(min.y).substring(min.x, max.x);
         }
         StringBuilder builder = new StringBuilder();
-        builder.append(this.text.get(min.y).substring(min.x));
+        builder.append(this.text.get(min.y).substring(min.x)).append('\n');
         if (max.y > min.y + 2) {
             for (int i = min.y + 1; i < max.y - 1; i++) {
-                builder.append(this.text.get(i));
+                builder.append(this.text.get(i)).append('\n');
             }
         }
         builder.append(this.text.get(max.y), 0, max.x);
@@ -271,11 +274,15 @@ public class TextFieldHandler {
         }
         this.text.set(cursor.y, lineStart + text.get(0));
         if (text.size() == 1) {
-            if (!test(text.get(0))) {
+            String word = text.get(0);
+            if (!test(word)) {
                 return;
             }
             this.text.set(cursor.y, this.text.get(cursor.y) + lineEnd);
-            setCursor(cursor.y, cursor.x + text.get(0).length());
+            setCursor(cursor.y, cursor.x + word.length());
+            if (word.length() == 1) {
+                onCharInserted(word.charAt(0));
+            }
         } else {
             if (text.size() > 1) {
                 this.text.add(cursor.y + 1, text.get(text.size() - 1) + lineEnd);
@@ -294,9 +301,15 @@ public class TextFieldHandler {
             delete(false);
         }
         String line = this.text.get(cursor.y);
+        if (line.length() == 0) {
+            this.text.add(cursor.y + 1, "");
+            setCursor(cursor.y + 1, 0);
+            return;
+        }
         this.text.set(cursor.y, line.substring(0, cursor.x));
-        this.text.add(cursor.y + 1, line.substring(cursor.x));
+        this.text.add(cursor.y + 1, cursor.x > line.length() ? "" : line.substring(cursor.x));
         setCursor(cursor.y + 1, 0);
+        onChanged();
     }
 
     public void delete() {
