@@ -155,4 +155,8 @@ public class TextRenderer {
     public Size getLastSize() {
         return new Size(lastWidth, lastHeight);
     }
+
+    public int getColor() {
+        return color;
+    }
 }

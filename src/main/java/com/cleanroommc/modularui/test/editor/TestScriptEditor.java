@@ -6,7 +6,6 @@ import com.cleanroommc.modularui.api.math.Size;
 import com.cleanroommc.modularui.api.screen.ModularWindow;
 import com.cleanroommc.modularui.api.screen.UIBuildContext;
 import com.cleanroommc.modularui.common.widget.TabContainer;
-import com.cleanroommc.modularui.common.widget.textfield.TextEditorWidget;
 
 public class TestScriptEditor {
 
@@ -27,6 +26,7 @@ public class TestScriptEditor {
                 .widget(new TabContainer()
                         .addPage(new CTEditorWidget()
                                 .setTextColor(Color.WHITE.dark(1))
+                                .setScrollable(true, true)
                                 .setPos(2, 2)
                                 .setSizeProvider((screenSize, window, parent) -> screenSize.shrink(77, 31)))
                         .setPos(73, 27));

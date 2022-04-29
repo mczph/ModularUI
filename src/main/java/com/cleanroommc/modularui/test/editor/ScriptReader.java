@@ -12,7 +12,7 @@ public class ScriptReader {
     }
 
     public static final Set<String> OPERATOR = Sets.newHashSet("+", "-", "*", "/", "%", "+", "-", "~", "=", "&", "|", "^", "!");
-    public static final Set<Character> OPERATOR_CHAR = Sets.newHashSet('+', '-', '*', '/', '%', '+', '-', '~', '=', '&', '|', '^', '!');
+    public static final Set<Character> OPERATOR_CHAR = Sets.newHashSet('+', '-', '*', '/', '%', '~', '=', '&', '|', '^', '!', '<', '>');
     public static final Set<Character> OTHER = Sets.newHashSet('(', ')', '{', '}', '[', ']', ';', ',', '.');
     public static final Set<String> KEY_WORD = Sets.newHashSet("import", "val", "var", "static", "global", "in", "has", "for", "while", "if", "else", "..", "function", "void", "as");
 
@@ -114,7 +114,7 @@ public class ScriptReader {
                                 charIndex++;
                                 return new Document.Token(Document.Type.BRACKET_HANDLER, word.toString(), start, null);
                             }
-                            if (!Character.isLetter(c) && c != ':' && c != '_') {
+                            if (!isCharLetterLike(c) && c != ':' && c != '.') {
                                 charIndex = start + 1;
                                 return new Document.Token(Document.Type.OPERATOR, "<", start, null);
                             }
@@ -132,7 +132,9 @@ public class ScriptReader {
                                 charIndex++;
                                 return new Document.Token(Document.Type.OPERATOR, word.toString(), start, null);
                             }
-                            if (c == '*' && last == '/') {
+                            if (c == '/' && last == '/') {
+                                type = Document.Type.COMMENT;
+                            } else if (c == '*' && last == '/') {
                                 globalType = Document.Type.COMMENT;
                                 type = Document.Type.COMMENT;
                             } else {
@@ -156,6 +158,7 @@ public class ScriptReader {
                             charIndex++;
                             return new Document.Token(Document.Type.STRING, word.toString(), start, null);
                         }
+                        break;
                     }
                     case SYMBOLS: {
                         if (!OTHER.contains(c)) {

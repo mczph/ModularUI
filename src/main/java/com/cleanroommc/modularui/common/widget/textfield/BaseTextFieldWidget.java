@@ -2,12 +2,15 @@ package com.cleanroommc.modularui.common.widget.textfield;
 
 import com.cleanroommc.modularui.api.drawable.GuiHelper;
 import com.cleanroommc.modularui.api.drawable.TextFieldRenderer;
+import com.cleanroommc.modularui.api.drawable.shapes.Rectangle;
 import com.cleanroommc.modularui.api.math.Alignment;
+import com.cleanroommc.modularui.api.math.Color;
 import com.cleanroommc.modularui.api.math.Size;
 import com.cleanroommc.modularui.api.widget.IWidgetParent;
 import com.cleanroommc.modularui.api.widget.Interactable;
 import com.cleanroommc.modularui.api.widget.Widget;
 import com.cleanroommc.modularui.api.widget.scroll.IHorizontalScrollable;
+import com.cleanroommc.modularui.api.widget.scroll.IVerticalScrollable;
 import com.cleanroommc.modularui.api.widget.scroll.ScrollType;
 import com.cleanroommc.modularui.common.widget.ScrollBar;
 import net.minecraft.client.gui.GuiScreen;
@@ -16,14 +19,14 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.lwjgl.input.Keyboard;
 
-import java.util.Collections;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.regex.Pattern;
 
 /**
  * The base of a text input widget. Handles mouse/keyboard input and rendering.
  */
-public class BaseTextFieldWidget extends Widget implements IWidgetParent, Interactable, IHorizontalScrollable {
+public class BaseTextFieldWidget extends Widget implements IWidgetParent, Interactable, IHorizontalScrollable, IVerticalScrollable {
 
     // all positive whole numbers
     public static final Pattern NATURAL_NUMS = Pattern.compile("[0-9]*([+\\-*/%^][0-9]*)*");
@@ -37,19 +40,31 @@ public class BaseTextFieldWidget extends Widget implements IWidgetParent, Intera
     protected TextFieldHandler handler = new TextFieldHandler();
     protected TextFieldRenderer renderer = new TextFieldRenderer(handler);
     protected Alignment textAlignment = Alignment.TopLeft;
-    protected int scrollOffset = 0;
+    protected int scrollOffsetX = 0;
+    protected int scrollOffsetY = 0;
     protected float scale = 1f;
     private int cursorTimer;
 
-    protected ScrollBar scrollBar;
+    protected ScrollBar scrollBarX, scrollBarY;
+    private final List<Widget> children = new ArrayList<>();
 
     public BaseTextFieldWidget() {
         this.handler.setRenderer(renderer);
     }
 
     @Override
+    public void initChildren() {
+        if (scrollBarX != null) {
+            children.add(scrollBarX);
+        }
+        if (scrollBarY != null) {
+            children.add(scrollBarY);
+        }
+    }
+
+    @Override
     public List<Widget> getChildren() {
-        return scrollBar == null ? Collections.emptyList() : Collections.singletonList(scrollBar);
+        return children;
     }
 
     @Override
@@ -64,7 +79,7 @@ public class BaseTextFieldWidget extends Widget implements IWidgetParent, Intera
     public void draw(float partialTicks) {
         GuiHelper.useScissor(pos.x, pos.y, size.width, size.height, () -> {
             GlStateManager.pushMatrix();
-            GlStateManager.translate(0.5f - scrollOffset, 0.5f, 0);
+            GlStateManager.translate(0.5f - scrollOffsetX, 0.5f - scrollOffsetY, 0);
             renderer.setSimulate(false);
             renderer.setScale(scale);
             renderer.setAlignment(textAlignment, -1, size.height);
@@ -90,18 +105,24 @@ public class BaseTextFieldWidget extends Widget implements IWidgetParent, Intera
         if (!isRightBelowMouse()) {
             return ClickResult.IGNORE;
         }
-        handler.setCursor(renderer.getCursorPos(handler.getText(), getContext().getCursor().getX() - pos.x + scrollOffset, getContext().getCursor().getY() - pos.y));
+        handler.setCursor(renderer.getCursorPos(handler.getText(), getContext().getCursor().getX() - pos.x + scrollOffsetX, getContext().getCursor().getY() - pos.y + scrollOffsetY));
         return ClickResult.SUCCESS;
     }
 
     @Override
     public void onMouseDragged(int buttonId, long deltaTime) {
-        handler.setMainCursor(renderer.getCursorPos(handler.getText(), getContext().getCursor().getX() - pos.x + scrollOffset, getContext().getCursor().getY() - pos.y));
+        handler.setMainCursor(renderer.getCursorPos(handler.getText(), getContext().getCursor().getX() - pos.x + scrollOffsetX, getContext().getCursor().getY() - pos.y + scrollOffsetY));
     }
 
     @Override
     public boolean onMouseScroll(int direction) {
-        return scrollBar != null && this.scrollBar.onMouseScroll(direction);
+        if (canScrollHorizontal() && (canScrollVertical() && Interactable.hasShiftDown()) || !canScrollVertical()) {
+            return scrollBarX.onMouseScroll(direction);
+        }
+        if (canScrollVertical()) {
+            return scrollBarY.onMouseScroll(direction);
+        }
+        return false;
     }
 
     @Override
@@ -115,8 +136,11 @@ public class BaseTextFieldWidget extends Widget implements IWidgetParent, Intera
                 }
                 return true;
             case Keyboard.KEY_ESCAPE:
-                removeFocus();
-                return true;
+                if (isFocused()) {
+                    removeFocus();
+                    return true;
+                }
+                return false;
             case Keyboard.KEY_LEFT: {
                 handler.moveCursorLeft(Interactable.hasControlDown(), Interactable.hasShiftDown());
                 return true;
@@ -175,26 +199,38 @@ public class BaseTextFieldWidget extends Widget implements IWidgetParent, Intera
         super.onRemoveFocus();
         this.renderer.setCursor(false);
         this.cursorTimer = 0;
-        this.scrollOffset = 0;
+        this.scrollOffsetX = 0;
     }
 
     @Override
     protected @NotNull Size determineSize(int maxWidth, int maxHeight) {
-        return new Size(maxWidth, (int) (renderer.getFontHeight() * getMaxLines() + 0.5));
+        int height = maxHeight;
+        if (scrollBarY == null) {
+            height = (int) (renderer.getFontHeight() * getMaxLines() + 0.5);
+        }
+        return new Size(maxWidth, height);
+    }
+
+    public boolean canScrollHorizontal() {
+        return this.scrollBarX != null && this.scrollBarX.isActive();
+    }
+
+    public boolean canScrollVertical() {
+        return this.scrollBarY != null && this.scrollBarY.isActive();
     }
 
     @Override
     public void setHorizontalScrollOffset(int offset) {
-        if (this.scrollBar != null && this.scrollBar.isActive()) {
-            this.scrollOffset = offset;
+        if (this.scrollBarX != null && this.scrollBarX.isActive()) {
+            this.scrollOffsetX = offset;
         } else {
-            this.scrollOffset = 0;
+            this.scrollOffsetX = 0;
         }
     }
 
     @Override
     public int getHorizontalScrollOffset() {
-        return this.scrollOffset;
+        return this.scrollOffsetX;
     }
 
     @Override
@@ -205,6 +241,30 @@ public class BaseTextFieldWidget extends Widget implements IWidgetParent, Intera
     @Override
     public int getActualWidth() {
         return (int) Math.ceil(renderer.getLastWidth());
+    }
+
+    @Override
+    public void setVerticalScrollOffset(int offset) {
+        if (this.scrollBarY != null && this.scrollBarY.isActive()) {
+            this.scrollOffsetY = offset;
+        } else {
+            this.scrollOffsetY = 0;
+        }
+    }
+
+    @Override
+    public int getVerticalScrollOffset() {
+        return scrollOffsetY;
+    }
+
+    @Override
+    public int getVisibleHeight() {
+        return size.height;
+    }
+
+    @Override
+    public int getActualHeight() {
+        return (int) renderer.getLastHeight();
     }
 
     public int getMaxLines() {
@@ -221,11 +281,31 @@ public class BaseTextFieldWidget extends Widget implements IWidgetParent, Intera
         return this;
     }
 
-    public BaseTextFieldWidget setScrollBar(@Nullable ScrollBar scrollBar) {
-        this.scrollBar = scrollBar;
-        this.handler.setScrollBar(scrollBar);
-        if (this.scrollBar != null) {
-            this.scrollBar.setScrollType(ScrollType.HORIZONTAL, this, null);
+    public BaseTextFieldWidget setHorizontalScrollBar(@Nullable ScrollBar scrollBarX) {
+        this.scrollBarX = scrollBarX;
+        this.handler.setScrollBar(scrollBarX);
+        if (this.scrollBarX != null) {
+            this.scrollBarX.setScrollType(ScrollType.HORIZONTAL, this, null);
+        }
+        return this;
+    }
+
+    public BaseTextFieldWidget setVerticalScrollBar(@Nullable ScrollBar scrollBarY) {
+        this.scrollBarY = scrollBarY;
+        if (this.scrollBarY != null) {
+            this.scrollBarY.setScrollType(ScrollType.VERTICAL, null, this);
+        }
+        return this;
+    }
+
+    public BaseTextFieldWidget setScrollable(boolean horizontal, boolean vertical) {
+        if (horizontal) {
+            setHorizontalScrollBar(new ScrollBar()
+                    .setBarTexture(new Rectangle().setColor(Color.WHITE.normal).setCornerRadius(1)));
+        }
+        if (vertical) {
+            setVerticalScrollBar(new ScrollBar()
+                    .setBarTexture(new Rectangle().setColor(Color.WHITE.normal).setCornerRadius(1)));
         }
         return this;
     }

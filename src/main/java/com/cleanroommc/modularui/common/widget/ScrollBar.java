@@ -19,6 +19,7 @@ public class ScrollBar extends Widget implements Interactable {
     private IHorizontalScrollable horizontalScrollable;
     private IDrawable barTexture = IDrawable.EMPTY;
     private int handleClickOffset = -1;
+    private int scrollAmount = 24;
 
     public void setScrollType(ScrollType scrollType, @Nullable IHorizontalScrollable horizontalScrollable, @Nullable IVerticalScrollable verticalScrollable) {
         this.scrollType = scrollType;
@@ -197,12 +198,17 @@ public class ScrollBar extends Widget implements Interactable {
 
     @Override
     public boolean onMouseScroll(int direction) {
-        setScrollOffset(getScrollOffset() - direction * 6);
+        setScrollOffset(getScrollOffset() - direction * scrollAmount);
         return true;
     }
 
     public ScrollBar setBarTexture(IDrawable barTexture) {
         this.barTexture = barTexture;
+        return this;
+    }
+
+    public ScrollBar setScrollAmount(int scrollAmount) {
+        this.scrollAmount = scrollAmount;
         return this;
     }
 }
