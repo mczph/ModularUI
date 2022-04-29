@@ -86,9 +86,12 @@ public class BaseTextFieldWidget extends Widget implements IWidgetParent, Intera
     }
 
     @Override
-    public boolean onClick(int buttonId, boolean doubleClick) {
+    public ClickResult onClick(int buttonId, boolean doubleClick) {
+        if (!isRightBelowMouse()) {
+            return ClickResult.IGNORE;
+        }
         handler.setCursor(renderer.getCursorPos(handler.getText(), getContext().getCursor().getX() - pos.x + scrollOffset, getContext().getCursor().getY() - pos.y));
-        return true;
+        return ClickResult.SUCCESS;
     }
 
     @Override
@@ -97,10 +100,8 @@ public class BaseTextFieldWidget extends Widget implements IWidgetParent, Intera
     }
 
     @Override
-    public void onHoverMouseScroll(int direction) {
-        if (this.scrollBar != null) {
-            this.scrollBar.onHoverMouseScroll(direction);
-        }
+    public boolean onMouseScroll(int direction) {
+        return scrollBar != null && this.scrollBar.onMouseScroll(direction);
     }
 
     @Override
@@ -172,8 +173,9 @@ public class BaseTextFieldWidget extends Widget implements IWidgetParent, Intera
     @Override
     public void onRemoveFocus() {
         super.onRemoveFocus();
-        renderer.setCursor(false);
-        cursorTimer = 0;
+        this.renderer.setCursor(false);
+        this.cursorTimer = 0;
+        this.scrollOffset = 0;
     }
 
     @Override

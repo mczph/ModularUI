@@ -49,7 +49,7 @@ public class ModularUIContext {
     public ModularUIContext(UIBuildContext context) {
         this.player = context.player;
         this.syncedWindowsCreators = context.syncedWindows.build();
-        cursor = new Cursor(this);
+        this.cursor = new Cursor(this);
     }
 
     public boolean isClient() {
@@ -181,7 +181,7 @@ public class ModularUIContext {
 
     @SideOnly(Side.CLIENT)
     public Pos2d getMousePos() {
-        return cursor.getPos();
+        return screen.getMousePos();
     }
 
     public boolean hasWindows() {
