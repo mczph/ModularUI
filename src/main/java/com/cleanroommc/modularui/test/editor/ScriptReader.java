@@ -14,7 +14,7 @@ public class ScriptReader {
     public static final Set<String> OPERATOR = Sets.newHashSet("+", "-", "*", "/", "%", "+", "-", "~", "=", "&", "|", "^", "!");
     public static final Set<Character> OPERATOR_CHAR = Sets.newHashSet('+', '-', '*', '/', '%', '~', '=', '&', '|', '^', '!', '<', '>');
     public static final Set<Character> OTHER = Sets.newHashSet('(', ')', '{', '}', '[', ']', ';', ',', '.');
-    public static final Set<String> KEY_WORD = Sets.newHashSet("import", "val", "var", "static", "global", "in", "has", "for", "while", "if", "else", "..", "function", "void", "as");
+    public static final Set<String> KEY_WORD = Sets.newHashSet("import", "val", "var", "static", "global", "in", "has", "for", "while", "if", "else", "..", "function", "void", "as", "true", "false");
 
     public final Map<String, String> variables = new HashMap<>();
     public final List<Document.Line> lines = new ArrayList<>();

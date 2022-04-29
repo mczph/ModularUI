@@ -29,21 +29,23 @@ public class CTEditorWidget extends TextEditorWidget {
     @Override
     public void draw(float partialTicks) {
         separator.draw(lineNumberWidth - 3, 0, 1, size.height, partialTicks);
-        GuiHelper.useScissor(pos.x, pos.y, size.width, size.height, () -> {
-            GlStateManager.pushMatrix();
-            GlStateManager.translate(0.5f - scrollOffsetX, 0.5f - scrollOffsetY, 0);
+        GlStateManager.pushMatrix();
+        GlStateManager.translate(0.5f, 0.5f - scrollOffsetY, 0);
+        GuiHelper.useScissor(pos.x, pos.y, lineNumberWidth, size.height, () -> {
             lineNumberRenderer.setScale(scale);
             for (int i = 1, n = Math.max(1, handler.getText().size()); i <= n; i++) {
                 lineNumberRenderer.setPos(0, (i - 1) * lineNumberRenderer.getFontHeight());
                 lineNumberRenderer.draw(String.valueOf(i));
             }
+        });
+        GuiHelper.useScissor(pos.x + lineNumberWidth, pos.y, size.width - lineNumberWidth, size.height, () -> {
             renderer.setSimulate(false);
             renderer.setScale(scale);
-            GlStateManager.translate(lineNumberWidth, 0, 0);
+            GlStateManager.translate(lineNumberWidth - scrollOffsetX, 0, 0);
             renderer.setAlignment(textAlignment, -1, size.height);
             renderer.draw(handler.getText());
-            GlStateManager.popMatrix();
         });
+        GlStateManager.popMatrix();
     }
 
     @Override
