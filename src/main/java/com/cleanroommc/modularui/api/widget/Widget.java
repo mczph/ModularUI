@@ -2,14 +2,13 @@ package com.cleanroommc.modularui.api.widget;
 
 import com.cleanroommc.modularui.api.drawable.IDrawable;
 import com.cleanroommc.modularui.api.drawable.Text;
-import com.cleanroommc.modularui.api.drawable.TooltipContainer;
-import com.cleanroommc.modularui.api.math.Color;
 import com.cleanroommc.modularui.api.math.GuiArea;
 import com.cleanroommc.modularui.api.math.Pos2d;
 import com.cleanroommc.modularui.api.math.Size;
 import com.cleanroommc.modularui.api.screen.ModularUIContext;
 import com.cleanroommc.modularui.api.screen.ModularWindow;
 import com.cleanroommc.modularui.common.internal.JsonHelper;
+import com.cleanroommc.modularui.common.internal.Theme;
 import com.google.gson.JsonObject;
 import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.network.PacketBuffer;
@@ -21,6 +20,7 @@ import org.jetbrains.annotations.Nullable;
 
 import java.awt.*;
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.function.Consumer;
 
@@ -50,11 +50,14 @@ public abstract class Widget {
     // flags and stuff
     protected boolean enabled = true;
     private int layer = -1;
+    private boolean respectJeiArea = false;
+    private boolean tooltipDirty = true;
 
     // visuals
     @Nullable
     private IDrawable[] background;
     private final List<Text> additionalTooltip = new ArrayList<>();
+    private final List<Text> mainTooltip = new ArrayList<>();
     private int tooltipShowUpDelay = 0;
     @Nullable
     private String debugLabel;
@@ -122,6 +125,10 @@ public abstract class Widget {
         this.window = window;
         this.parent = parent;
         this.layer = layer;
+
+        if (this.respectJeiArea) {
+            getContext().registerExclusionZone(this);
+        }
 
         onInit();
 
@@ -202,14 +209,14 @@ public abstract class Widget {
             GlStateManager.pushMatrix();
             Pos2d windowPos = getWindow().getPos();
             Size windowSize = getWindow().getSize();
-            int color = getWindow().getColor();
+            int alpha = getWindow().getAlpha();
             float scale = getWindow().getScale();
             float sf = 1 / scale;
             // translate to center according to scale
             float x = (windowPos.x + windowSize.width / 2f * (1 - scale) + (pos.x - windowPos.x) * scale) * sf;
             float y = (windowPos.y + windowSize.height / 2f * (1 - scale) + (pos.y - windowPos.y) * scale) * sf;
             GlStateManager.translate(x, y, 0);
-            GlStateManager.color(Color.getRedF(color), Color.getGreenF(color), Color.getBlueF(color), Color.getAlphaF(color));
+            GlStateManager.color(1, 1, 1, alpha);
             GlStateManager.enableBlend();
             drawBackground(partialTicks);
             draw(partialTicks);
@@ -246,6 +253,7 @@ public abstract class Widget {
     /**
      * Called after this widget is rebuild aka size and pos are set.
      */
+    @ApiStatus.OverrideOnly
     @SideOnly(Side.CLIENT)
     public void onRebuild() {
     }
@@ -265,6 +273,7 @@ public abstract class Widget {
     /**
      * Called once per tick
      */
+    @ApiStatus.OverrideOnly
     @SideOnly(Side.CLIENT)
     public void onScreenUpdate() {
     }
@@ -272,6 +281,7 @@ public abstract class Widget {
     /**
      * Called each frame, approximately 60 times per second
      */
+    @ApiStatus.OverrideOnly
     @SideOnly(Side.CLIENT)
     public void onFrameUpdate() {
     }
@@ -283,8 +293,10 @@ public abstract class Widget {
     public void drawBackground(float partialTicks) {
         IDrawable[] background = getBackground();
         if (background != null) {
+            int themeColor = Theme.INSTANCE.getColor(getBackgroundColorKey());
             for (IDrawable drawable : background) {
                 if (drawable != null) {
+                    drawable.applyThemeColor(themeColor);
                     drawable.draw(Pos2d.ZERO, getSize(), partialTicks);
                 }
             }
@@ -296,6 +308,7 @@ public abstract class Widget {
      *
      * @param partialTicks ticks since last draw
      */
+    @ApiStatus.OverrideOnly
     @SideOnly(Side.CLIENT)
     public void draw(float partialTicks) {
     }
@@ -305,19 +318,29 @@ public abstract class Widget {
      *
      * @param partialTicks ticks since last draw
      */
+    @ApiStatus.OverrideOnly
     @SideOnly(Side.CLIENT)
     public void drawInForeground(float partialTicks) {
     }
 
     /**
-     * Called every render tick when this widget is the highest under the mouse
+     * Called after {@link #notifyTooltipChange()} is called. Result list is cached
      *
-     * @return tooltip container which contains data for rendering
+     * @param tooltip tooltip
      */
-    @Nullable
+    @ApiStatus.OverrideOnly
     @SideOnly(Side.CLIENT)
-    public TooltipContainer getHoverText() {
-        return null;
+    public void buildTooltip(List<Text> tooltip) {
+    }
+
+    /**
+     * @return the color key for the background
+     * @see Theme
+     */
+    @SideOnly(Side.CLIENT)
+    @Nullable
+    public String getBackgroundColorKey() {
+        return Theme.KEY_BACKGROUND;
     }
 
 
@@ -326,12 +349,14 @@ public abstract class Widget {
     /**
      * Called once when the window opens, before children get initialised.
      */
+    @ApiStatus.OverrideOnly
     public void onInit() {
     }
 
     /**
      * Called once when the window opens, after children get initialised.
      */
+    @ApiStatus.OverrideOnly
     public void onPostInit() {
     }
 
@@ -339,18 +364,21 @@ public abstract class Widget {
      * Called when another window opens over the current one
      * or when this window is active and it closes
      */
+    @ApiStatus.OverrideOnly
     public void onPause() {
     }
 
     /**
      * Called when this window becomes active after being paused
      */
+    @ApiStatus.OverrideOnly
     public void onResume() {
     }
 
     /**
      * Called when this window closes
      */
+    @ApiStatus.OverrideOnly
     public void onDestroy() {
     }
 
@@ -362,6 +390,7 @@ public abstract class Widget {
      *
      * @return if the ui focus should be set to this widget
      */
+    @ApiStatus.OverrideOnly
     @SideOnly(Side.CLIENT)
     public boolean shouldGetFocus() {
         return this instanceof Interactable;
@@ -370,6 +399,7 @@ public abstract class Widget {
     /**
      * Called when this widget was focused and now something else is focused
      */
+    @ApiStatus.OverrideOnly
     @SideOnly(Side.CLIENT)
     public void onRemoveFocus() {
     }
@@ -392,7 +422,7 @@ public abstract class Widget {
 
     @SideOnly(Side.CLIENT)
     public boolean canHover() {
-        return !(this instanceof IWidgetParent) || (this.background != null && this.background.length > 0);
+        return hasTooltip() || !(this instanceof IWidgetParent) || (this.background != null && this.background.length > 0);
     }
 
     /**
@@ -496,8 +526,30 @@ public abstract class Widget {
         return background;
     }
 
+    private void checkTooltip() {
+        if (this.tooltipDirty) {
+            this.mainTooltip.clear();
+            buildTooltip(this.mainTooltip);
+            this.tooltipDirty = false;
+        }
+    }
+
+    public void notifyTooltipChange() {
+        this.tooltipDirty = true;
+    }
+
+    public boolean hasTooltip() {
+        checkTooltip();
+        return !this.mainTooltip.isEmpty() || !this.additionalTooltip.isEmpty();
+    }
+
     public List<Text> getTooltip() {
-        return additionalTooltip;
+        if (!hasTooltip()) {
+            return Collections.emptyList();
+        }
+        List<Text> tooltip = new ArrayList<>(this.mainTooltip);
+        tooltip.addAll(this.additionalTooltip);
+        return tooltip;
     }
 
     public int getTooltipShowUpDelay() {
@@ -514,6 +566,10 @@ public abstract class Widget {
                 widget.getPos().x + widget.getSize().width < getPos().x ||
                 widget.getPos().y > getPos().y + getSize().height ||
                 widget.getPos().y + widget.getSize().height < getPos().y);
+    }
+
+    public Rectangle getRectangle() {
+        return new Rectangle(pos.x, pos.y, size.width, size.height);
     }
 
 
@@ -660,6 +716,16 @@ public abstract class Widget {
      */
     public Widget setTicker(@Nullable Consumer<Widget> ticker) {
         this.ticker = ticker;
+        return this;
+    }
+
+    public Widget respectAreaInJei() {
+        if (!this.respectJeiArea) {
+            this.respectJeiArea = true;
+            if (isInitialised()) {
+                getContext().registerExclusionZone(this);
+            }
+        }
         return this;
     }
 

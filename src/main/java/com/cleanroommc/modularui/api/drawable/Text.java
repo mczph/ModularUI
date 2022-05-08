@@ -3,6 +3,7 @@ package com.cleanroommc.modularui.api.drawable;
 import com.cleanroommc.modularui.api.math.Alignment;
 import com.cleanroommc.modularui.api.math.Color;
 import com.cleanroommc.modularui.common.internal.JsonHelper;
+import com.cleanroommc.modularui.common.internal.Theme;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import net.minecraft.client.resources.I18n;
@@ -16,16 +17,19 @@ import java.util.function.Supplier;
 
 public class Text implements IDrawable {
 
+    public static final Text EMPTY = new Text("");
+
     private static final TextRenderer renderer = new TextRenderer();
     private final String text;
     private String formatting = "";
     @Nullable
     private Supplier<Object[]> localisationData;
-    private int color = TextRenderer.DEFAULT_COLOR;
+    private int color;
     private boolean shadow = false;
 
     public Text(String text) {
         this.text = Objects.requireNonNull(text, "String in Text can't be null!");
+        this.color = Theme.INSTANCE.getText();
     }
 
     public static Text localised(String key, Object... data) {
@@ -82,12 +86,16 @@ public class Text implements IDrawable {
     }
 
     @Override
+    public void applyThemeColor(int color) {
+        renderer.setColor(hasColor() ? this.color : Theme.INSTANCE.getText());
+    }
+
+    @Override
     public void draw(float x, float y, float width, float height, float partialTicks) {
         renderer.setPos(x, y);
         renderer.setShadow(shadow);
         renderer.setAlignment(Alignment.Center, width, height);
-        renderer.setColor(hasColor() ? this.color : TextRenderer.DEFAULT_COLOR);
-        renderer.draw(text);
+        renderer.draw(getFormatted());
     }
 
     public String getFormatted() {

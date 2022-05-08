@@ -7,8 +7,11 @@ import com.cleanroommc.modularui.api.math.Pos2d;
 import com.cleanroommc.modularui.api.math.Size;
 import com.cleanroommc.modularui.api.widget.IIngredientProvider;
 import com.cleanroommc.modularui.api.widget.Interactable;
+import com.cleanroommc.modularui.common.internal.Theme;
 import com.cleanroommc.modularui.common.internal.network.NetworkUtils;
 import com.cleanroommc.modularui.common.internal.wrapper.FluidTankHandler;
+import com.cleanroommc.modularui.common.internal.wrapper.ModularGui;
+import net.minecraft.client.renderer.GlStateManager;
 import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.item.ItemStack;
 import net.minecraft.network.PacketBuffer;
@@ -25,6 +28,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.io.IOException;
+import java.util.List;
 
 public class FluidSlotWidget extends SyncedWidget implements Interactable, IIngredientProvider {
 
@@ -45,6 +49,7 @@ public class FluidSlotWidget extends SyncedWidget implements Interactable, IIngr
     private boolean canFillSlot = true;
     private boolean phantom = false;
     private boolean controlsAmount = true;
+    private boolean lastShift = false;
 
     public FluidSlotWidget(IFluidTank fluidTank) {
         this.fluidTank = fluidTank;
@@ -89,48 +94,44 @@ public class FluidSlotWidget extends SyncedWidget implements Interactable, IIngr
         }
     }
 
-    @Nullable
     @Override
-    public TooltipContainer getHoverText() {
-        TooltipContainer tooltip = new TooltipContainer();
+    public void buildTooltip(List<Text> tooltip) {
         FluidStack fluid = cachedFluid;
         if (phantom) {
             if (fluid != null) {
-                tooltip.addLine(fluid.getLocalizedName());
+                tooltip.add(new Text(fluid.getLocalizedName()));
                 if (controlsAmount) {
-                    tooltip.addLine(Text.localised("modularui.fluid.phantom.amount", fluid.amount));
+                    tooltip.add(Text.localised("modularui.fluid.phantom.amount", fluid.amount));
                 }
             } else {
-                tooltip.addLine(Text.localised("modularui.fluid.empty"));
+                tooltip.add(Text.localised("modularui.fluid.empty"));
             }
             if (controlsAmount) {
-                tooltip.addLine(Text.localised("modularui.fluid.phantom.control"));
+                tooltip.add(Text.localised("modularui.fluid.phantom.control"));
             }
         } else {
             if (fluid != null) {
-                tooltip.addLine(fluid.getLocalizedName());
-                tooltip.addLine(Text.localised("modularui.fluid.amount", fluid.amount, fluidTank.getCapacity()));
+                tooltip.add(new Text(fluid.getLocalizedName()));
+                tooltip.add(Text.localised("modularui.fluid.amount", fluid.amount, fluidTank.getCapacity()));
                 addAdditionalFluidInfo(tooltip, fluid);
             } else {
-                tooltip.addLine(Text.localised("modularui.fluid.empty"));
+                tooltip.add(Text.localised("modularui.fluid.empty"));
             }
             if (canFillSlot || canDrainSlot) {
-                tooltip.addLine(); // Add an empty line to separate from the bottom material tooltips
+                tooltip.add(Text.EMPTY); // Add an empty line to separate from the bottom material tooltips
                 if (Interactable.hasShiftDown()) {
                     if (canFillSlot && canDrainSlot) {
-                        tooltip.addLine(Text.localised("modularui.fluid.click_combined"));
+                        tooltip.add(Text.localised("modularui.fluid.click_combined"));
                     } else if (canDrainSlot) {
-                        tooltip.addLine(Text.localised("modularui.fluid.click_to_fill"));
+                        tooltip.add(Text.localised("modularui.fluid.click_to_fill"));
                     } else if (canFillSlot) {
-                        tooltip.addLine(Text.localised("modularui.fluid.click_to_empty"));
+                        tooltip.add(Text.localised("modularui.fluid.click_to_empty"));
                     }
                 } else {
-                    tooltip.addLine(Text.localised("modularui.tooltip.shift"));
+                    tooltip.add(Text.localised("modularui.tooltip.shift"));
                 }
             }
         }
-
-        return tooltip;
     }
 
     /**
@@ -139,7 +140,12 @@ public class FluidSlotWidget extends SyncedWidget implements Interactable, IIngr
      * @param tooltipContainer add lines here
      * @param fluid            the nonnull fluid
      */
-    public void addAdditionalFluidInfo(TooltipContainer tooltipContainer, @NotNull FluidStack fluid) {
+    public void addAdditionalFluidInfo(List<Text> tooltipContainer, @NotNull FluidStack fluid) {
+    }
+
+    @Override
+    public @Nullable String getBackgroundColorKey() {
+        return Theme.KEY_FLUID_SLOT;
     }
 
     @Override
@@ -163,7 +169,21 @@ public class FluidSlotWidget extends SyncedWidget implements Interactable, IIngr
             textRenderer.setAlignment(Alignment.CenterRight, size.width - contentOffset.x - 1f);
             textRenderer.setPos(contentOffset.x + 0.5f, size.height - 5.5f);
             textRenderer.draw(s);
-            //textRenderer.drawAligned(s, contentOffset.x + 0.5f, size.height - 5.5f, size.width - contentOffset.x - 1f, 0xFFFFFF, 1);
+        }
+        if (isHovering()) {
+            if (isHovering()) {
+                GlStateManager.colorMask(true, true, true, false);
+                ModularGui.drawSolidRect(1, 1, 16, 16, Theme.INSTANCE.getSlotHighlight());
+                GlStateManager.colorMask(true, true, true, true);
+            }
+        }
+    }
+
+    @Override
+    public void onScreenUpdate() {
+        if (lastShift != Interactable.hasShiftDown()) {
+            lastShift = Interactable.hasShiftDown();
+            notifyTooltipChange();
         }
     }
 
@@ -221,6 +241,7 @@ public class FluidSlotWidget extends SyncedWidget implements Interactable, IIngr
     public void readOnClient(int id, PacketBuffer buf) throws IOException {
         if (id == 1) {
             this.cachedFluid = NetworkUtils.readFluidStack(buf);
+            notifyTooltipChange();
         } else if (id == 3) {
             this.controlsAmount = buf.readBoolean();
         }

@@ -11,14 +11,13 @@ import org.lwjgl.opengl.GL11;
 
 public class Circle implements IDrawable {
 
-    public static final double PI_2 = Math.PI / 2;
     public static final double PI2 = Math.PI * 2;
 
     private int colorInner, colorOuter, segments;
 
     public Circle() {
-        this.colorInner = 0xFFFFFFFF;
-        this.colorOuter = 0xFFFFFFFF;
+        this.colorInner = 0;
+        this.colorOuter = 0;
         this.segments = 40;
     }
 
@@ -42,6 +41,13 @@ public class Circle implements IDrawable {
     public Circle setSegments(int segments) {
         this.segments = segments;
         return this;
+    }
+
+    @Override
+    public void applyThemeColor(int color) {
+        if (colorInner == 0 && colorOuter == 0) {
+            IDrawable.super.applyThemeColor(color == 0 ? 0xFFFFFFFF : color);
+        }
     }
 
     @Override
