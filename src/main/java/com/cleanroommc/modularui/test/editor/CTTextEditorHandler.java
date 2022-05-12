@@ -3,10 +3,34 @@ package com.cleanroommc.modularui.test.editor;
 import com.cleanroommc.modularui.common.widget.textfield.TextFieldHandler;
 
 import java.awt.*;
+import java.util.Arrays;
 
 public class CTTextEditorHandler extends TextFieldHandler {
 
     private final Document document = new Document();
+
+    public CTTextEditorHandler() {
+        this.text.addAll(Arrays.asList(
+                "#no run",
+                "",
+                "// Script by brachy84",
+                "",
+                "import mods.gregtech.recipe.RecipeMap;",
+                "import crafttweaker.item.IItemStack;",
+                "import crafttweaker.item.IIngredient;",
+                "",
+                "val variable as IItemStack = <minecraft:diamond_block>;",
+                "",
+                "function testFunction() {",
+                "   recipes.remove(variable);",
+                "   recipes.removeByName(\"minecraft:diamond_block\");",
+                "}",
+                "",
+                "testFunction();",
+                ""
+        ));
+        onChanged();
+    }
 
     public Document getDocument() {
         return document;

@@ -14,6 +14,7 @@ public class ScriptStyle {
         ONE_UI.stringColor = 0x89CA78;
         ONE_UI.numberColor = 0xD19A66;
         ONE_UI.commentColor = 0x5C6370;
+        ONE_UI.localVarColor = Color.WHITE.dark(0);
         ONE_UI.bracketColor = Color.GREEN.normal;
     }
 
@@ -25,6 +26,8 @@ public class ScriptStyle {
     public int numberColor;
     public int commentColor;
     public int bracketColor;
+    public int localVarColor;
+    public int fileVarColor;
     public int defaultColor = Color.WHITE.normal;
 
     public int getColor(Document.Type type) {

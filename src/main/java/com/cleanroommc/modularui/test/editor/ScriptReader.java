@@ -11,10 +11,10 @@ public class ScriptReader {
         public static final String BRACKET = "Invalid character in bracket!";
     }
 
-    public static final Set<String> OPERATOR = Sets.newHashSet("+", "-", "*", "/", "%", "+", "-", "~", "=", "&", "|", "^", "!");
-    public static final Set<Character> OPERATOR_CHAR = Sets.newHashSet('+', '-', '*', '/', '%', '~', '=', '&', '|', '^', '!', '<', '>');
+    public static final Set<Character> OPERATOR = Sets.newHashSet('+', '-', '*', '/', '%', '~', '=', '&', '|', '^', '!', '<', '>');
     public static final Set<Character> OTHER = Sets.newHashSet('(', ')', '{', '}', '[', ']', ';', ',', '.');
     public static final Set<String> KEY_WORD = Sets.newHashSet("import", "val", "var", "static", "global", "in", "has", "for", "while", "if", "else", "..", "function", "void", "as", "true", "false");
+    public static final Set<String> PRIMITIVES = Sets.newHashSet("string", "int", "long", "float", "double", "boolean");
 
     public final Map<String, String> variables = new HashMap<>();
     public final List<Document.Line> lines = new ArrayList<>();
@@ -23,6 +23,8 @@ public class ScriptReader {
     private int charIndex;
     private Document.Type globalType = Document.Type.UNDEFINED;
     private StringBuilder word = new StringBuilder();
+    private CodeCompleter.ZsClass currentClass = null;
+    private boolean staticRef = false;
 
     public void read(List<String> rawLines) {
         this.rawLines = rawLines;
@@ -62,7 +64,7 @@ public class ScriptReader {
                     type = Document.Type.WORD;
                 } else if (c == '<') {
                     type = Document.Type.BRACKET_HANDLER;
-                } else if (OPERATOR_CHAR.contains(c)) {
+                } else if (OPERATOR.contains(c)) {
                     type = Document.Type.OPERATOR;
                 } else if (c == ' ' || c == '\t') {
                     if (c == '\t') {
@@ -92,6 +94,8 @@ public class ScriptReader {
                             String word = this.word.toString();
                             if (KEY_WORD.contains(word)) {
                                 type = Document.Type.KEYWORD;
+                            } else if (c == '(') {
+                                type = Document.Type.FUNCTION;
                             }
                             return new Document.Token(type, word, start, null);
                         }
@@ -122,12 +126,12 @@ public class ScriptReader {
                         break;
                     }
                     case OPERATOR: {
-                        if (!OPERATOR_CHAR.contains(c)) {
+                        if (!OPERATOR.contains(c)) {
                             return new Document.Token(Document.Type.OPERATOR, word.toString(), start, null);
                         }
                         if (word.length() == 1) {
                             char last = word.charAt(0);
-                            if ((c == '+' && last == '+') || (c == '-' && last == '-') || (c == '=' && (last == '+' || last == '-' || last == '*' || last == '/' || last == '>' || last == '!'))) {
+                            if ((c == '+' && last == '+') || (c == '-' && last == '-') || (c == '=' && (last == '+' || last == '-' || last == '*' || last == '/' || last == '>' || last == '!' || last == '='))) {
                                 word.append(c);
                                 charIndex++;
                                 return new Document.Token(Document.Type.OPERATOR, word.toString(), start, null);
